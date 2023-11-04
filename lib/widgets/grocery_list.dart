@@ -9,6 +9,7 @@ class GroceryList extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Your Groceries')),
       body: ListView.builder(
+          itemCount: groceryItems.length,
           itemBuilder: (ctx, index) => ListTile(
                 title: Text(groceryItems[index].name),
                 leading: Container(
