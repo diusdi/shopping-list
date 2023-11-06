@@ -15,35 +15,46 @@ class GroceryList extends StatefulWidget {
 
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
+  var _isLoading = true;
 
   void _loadItems() async {
     final url = Uri.https(
         'flutter-prep-c8053-default-rtdb.firebaseio.com', 'shopping-list.json');
     final response = await http.get(url);
     final Map<String, dynamic> listData = jsonDecode(response.body);
-    final List<GroceryItem> _loadedItems = [];
+    final List<GroceryItem> loadedItems = [];
 
     for (final item in listData.entries) {
       final category = categories.entries
           .firstWhere(
               (catItem) => catItem.value.title == item.value['category'])
           .value;
-      _loadedItems.add(GroceryItem(
+      loadedItems.add(GroceryItem(
           id: item.key,
           name: item.value['name'],
           quantity: item.value['quantity'],
           category: category));
     }
 
-    _groceryItems = _loadedItems;
+    setState(() {
+      _groceryItems = loadedItems;
+      _isLoading = false;
+    });
   }
 
   void _addForm() async {
-    await Navigator.of(context).push(
+    final newItem = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => const NewItem(),
       ),
     );
+
+    if (newItem == null) {
+      return;
+    }
+    setState(() {
+      _groceryItems.add(newItem);
+    });
   }
 
   void _removeList(GroceryItem groceryItem) {
@@ -70,7 +81,6 @@ class _GroceryListState extends State<GroceryList> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _loadItems();
   }
@@ -79,6 +89,11 @@ class _GroceryListState extends State<GroceryList> {
   Widget build(BuildContext context) {
     Widget content = const Center(child: Text('No item added yet'));
 
+    if (_isLoading) {
+      setState(() {
+        content = const Center(child: CircularProgressIndicator());
+      });
+    }
     if (_groceryItems.isNotEmpty) {
       content = ListView.builder(
           itemCount: _groceryItems.length,
