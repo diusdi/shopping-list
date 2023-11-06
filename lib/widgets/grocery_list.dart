@@ -16,11 +16,24 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _isLoading = true;
+  String? _error;
 
   void _loadItems() async {
     final url = Uri.https(
         'flutter-prep-c8053-default-rtdb.firebaseio.com', 'shopping-list.json');
     final response = await http.get(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = 'Failed to fetch data. Please try again later';
+      });
+    }
+
+    if (response.body == 'null') {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
     final Map<String, dynamic> listData = jsonDecode(response.body);
     final List<GroceryItem> loadedItems = [];
 
@@ -57,26 +70,20 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _removeList(GroceryItem groceryItem) {
+  void _removeList(GroceryItem groceryItem) async {
     final groceryIndex = _groceryItems.indexOf(groceryItem);
     setState(() {
       _groceryItems.remove(groceryItem);
     });
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 3),
-        content: const Text('Item deleted'),
-        action: SnackBarAction(
-            label: 'undo',
-            onPressed: () {
-              setState(() {
-                _groceryItems.insert(groceryIndex, groceryItem);
-              });
-            }),
-      ),
-    );
+    final url = Uri.https('flutter-prep-c8053-default-rtdb.firebaseio.com',
+        'shopping-list/${groceryItem.id}.json');
+    final response = await http.delete(url);
+    if (response.statusCode >= 400) {
+      setState(() {
+        _groceryItems.insert(groceryIndex, groceryItem);
+      });
+    }
   }
 
   @override
@@ -115,6 +122,10 @@ class _GroceryListState extends State<GroceryList> {
                   trailing: Text(_groceryItems[index].quantity.toString()),
                 ),
               ));
+    }
+
+    if (_error != null) {
+      content = Center(child: Text(_error!));
     }
     return Scaffold(
       appBar: AppBar(
